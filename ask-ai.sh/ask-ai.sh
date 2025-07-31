@@ -1,18 +1,49 @@
 #! /usr/bin/env bash
 
-MODEL=$(ollama list | awk 'NR > 1 {print $1}')
+endpoint='localhost:11434'
 
-PROMPT=$(printf "%s " $@)
+if [ $OLLAMA_HOST ]; then
+  endpoint=$OLLAMA_HOST
+fi
 
-DATA="
+model=$(curl -s http://$endpoint/api/tags \
+  | jq -r '.models.[0].name // ""' \
+)
+
+if [ -z $model ]; then
+  echo No model found. Please ensure that ollama is enabled and at least one \
+  model is installed.
+  exit 0
+fi
+
+prompt=$(printf "%s " $@)
+
+message="{
+  \"role\": \"user\",
+  \"content\": \"$prompt\"
+}"
+
+messages="[
+  $message
+]"
+
+data="
   {
-    \"model\": \"$MODEL\",
-    \"prompt\": \"$PROMPT\",
-    \"stream\": false
+    \"model\": \"$model\",
+    \"messages\": $messages,
+    \"stream\": false,
+    \"keep_alive\": \"15m\"
   }
 "
-# printf "%s " $DATA
+printf "%s " $message | jq .
 
-curl -s http://localhost:11434/api/generate -d "$DATA" \
-  | jq -r '.response' \
-  | bat -pp -l md
+printf "\n"
+
+response=$( \
+  curl -s http://$endpoint/api/chat -d "$data" \
+    | jq '.message' \
+)
+
+printf "%s " $response | jq .
+
+printf "%s " $response | jq -r '.content' | bat -pp -l md
