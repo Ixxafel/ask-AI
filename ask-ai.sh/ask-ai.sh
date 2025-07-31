@@ -11,9 +11,9 @@ model=$(curl -s http://$endpoint/api/tags \
 )
 
 if [ -z $model ]; then
-  echo No model found. Please ensure that ollama is enabled and at least one \
-  model is installed.
-  exit 0
+  >&2 echo No model found. Please ensure that ollama is enabled and at least \
+  one model is installed.
+  exit 1
 fi
 
 cachedir=~/.cache/askai/
@@ -45,8 +45,12 @@ data="
 
 response=$( \
   curl -s http://$endpoint/api/chat -d "$data" \
-    | jq '.message' \
+    | jq '.message // ""' \
 )
+
+if [ -z $response ]; then
+  >&2 echo Bad response from remote.
+  exit 2
 
 printf "%s " $response | jq -r '.content' | bat -pp -l md;
 
