@@ -16,6 +16,12 @@ if [ -z $model ]; then
   exit 0
 fi
 
+cachedir=~/.cache/askai/
+memoryfile=memory.json
+
+mkdir -p $cachedir
+touch $cachedir/$memoryfile
+
 prompt=$(printf "%s " $@)
 
 message="{
@@ -24,6 +30,7 @@ message="{
 }"
 
 messages="[
+  $(cat $cachedir/$memoryfile)
   $message
 ]"
 
@@ -35,15 +42,15 @@ data="
     \"keep_alive\": \"15m\"
   }
 "
-printf "%s " $message | jq .
-
-printf "\n"
 
 response=$( \
   curl -s http://$endpoint/api/chat -d "$data" \
     | jq '.message' \
 )
 
-printf "%s " $response | jq .
+printf "%s " $response | jq -r '.content' | bat -pp -l md;
 
-printf "%s " $response | jq -r '.content' | bat -pp -l md
+printf "%s " $message >> $cachedir/$memoryfile
+printf ",\n" >> $cachedir/$memoryfile
+printf "%s " $response >> $cachedir/$memoryfile
+printf ",\n" >> $cachedir/$memoryfile
