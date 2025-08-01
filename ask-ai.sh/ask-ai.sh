@@ -51,6 +51,7 @@ response=$( \
 if [ -z $response ]; then
   >&2 echo Bad response from remote.
   exit 2
+fi
 
 printf "%s " $response | jq -r '.content' | bat -pp -l md;
 
